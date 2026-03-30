@@ -91,9 +91,6 @@ export default function App() {
   
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
-  const [editedImage, setEditedImage] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [prompt, setPrompt] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
   const [zoom, setZoom] = useState(1);
@@ -101,17 +98,9 @@ export default function App() {
   const [maxZoom, setMaxZoom] = useState(1);
   const [isZoomSupported, setIsZoomSupported] = useState(false);
   
-  const [uploadedBg, setUploadedBg] = useState<string | null>(null);
-  const [credits, setCredits] = useState(5);
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [isAutoEnhanceEnabled, setIsAutoEnhanceEnabled] = useState(true);
   const [showPresets, setShowPresets] = useState(false);
   const [isAutoEnhancing, setIsAutoEnhancing] = useState(false);
-  const [showRoomsMenu, setShowRoomsMenu] = useState(false);
-  const [showIdMenu, setShowIdMenu] = useState(false);
-  const [showUniformsMenu, setShowUniformsMenu] = useState(false);
-  const [selectedAspectRatio, setSelectedAspectRatio] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Video recording state
@@ -234,30 +223,6 @@ export default function App() {
     return () => stopCamera();
   }, [captureMode, videoQuality]);
 
-  const analyzeImage = async (base64: string) => {
-    setIsAnalyzing(true);
-    try {
-      const response = await ai.models.generateContent({
-        model: 'gemini-3-flash-preview',
-        contents: [
-          { inlineData: { data: base64, mimeType: 'image/jpeg' } },
-          { text: "Analyze this photo and suggest 3 trendy TikTok-style aesthetic edits or background changes (max 5 words each). Return ONLY a valid JSON array of strings." }
-        ],
-        config: {
-          responseMimeType: "application/json",
-        }
-      });
-      const text = response.text || "[]";
-      const suggestions = JSON.parse(text);
-      setAiSuggestions(suggestions.slice(0, 3));
-    } catch (err) {
-      console.error("AI Analysis failed:", err);
-      setAiSuggestions(["Enhance lighting", "Make it cinematic", "Remove background"]);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
   const autoEnhanceImage = async (base64Data: string) => {
     setIsAutoEnhancing(true);
     try {
@@ -271,22 +236,27 @@ export default function App() {
             },
           },
           {
-            text: "Auto-enhance this photo. Subtly auto-retouch faces: smooth skin, reduce blemishes, and enhance facial features naturally without looking artificial. Fix lighting, brighten dark areas, correct the angle, and make the picture extremely clean and high quality. Keep the original subject and background exactly the same, just enhanced.",
+            text: "Professional photo enhancement: improve lighting, color balance, and clarity. Subtly retouch skin and facial features for a clean, high-quality look. Return only the enhanced image data.",
           },
         ],
       });
 
       let foundImage = false;
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      
+      for (const part of parts) {
+        if (part.inlineData?.data) {
           const imageUrl = `data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}`;
           setCapturedImage(imageUrl);
           foundImage = true;
           break;
         }
       }
+      
       if (!foundImage) {
-        console.error("Auto-enhance failed to return an image.");
+        const textResponse = response.text;
+        console.warn("Auto-enhance did not return an image part. Model said:", textResponse);
+        // Fallback: keep the original captured image (already set in capturePhoto)
       }
     } catch (err) {
       console.error("Auto-enhance error:", err);
@@ -410,113 +380,12 @@ export default function App() {
 
   const retakePhoto = () => {
     setCapturedImage(null);
-    setEditedImage(null);
     if (recordedVideo) {
       URL.revokeObjectURL(recordedVideo);
       setRecordedVideo(null);
     }
-    setPrompt('');
     setError(null);
-    setUploadedBg(null);
     startCamera(facingMode, videoQuality, captureMode);
-  };
-
-  const handleUploadClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setUploadedBg(event.target?.result as string);
-        setPrompt("Replace the background with the uploaded image");
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleEdit = async () => {
-    if (credits <= 0) {
-      setError("You've run out of credits!");
-      return;
-    }
-
-    const finalPrompt = prompt.trim();
-    if (!finalPrompt) {
-      setError("Please tell us what you want to fix!");
-      return;
-    }
-    if (!capturedImage) return;
-
-    setIsEditing(true);
-    setError(null);
-
-    try {
-      // Extract base64 data without the prefix
-      const base64Data = capturedImage.split(',')[1];
-      
-      const parts: any[] = [
-        {
-          inlineData: {
-            data: base64Data,
-            mimeType: 'image/jpeg',
-          },
-        },
-        {
-          text: finalPrompt,
-        },
-      ];
-
-      if (uploadedBg) {
-        const bgBase64 = uploadedBg.split(',')[1];
-        parts.push({
-          inlineData: {
-            data: bgBase64,
-            mimeType: 'image/jpeg',
-          }
-        });
-        parts.push({
-          text: "Use the second image as the new background for the first image."
-        });
-      }
-      
-      const requestConfig: any = {};
-      if (selectedAspectRatio) {
-        requestConfig.imageConfig = {
-          aspectRatio: selectedAspectRatio
-        };
-      }
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash-image',
-        contents: {
-          parts: parts,
-        },
-        ...(Object.keys(requestConfig).length > 0 ? { config: requestConfig } : {})
-      });
-
-      let foundImage = false;
-      for (const part of response.candidates?.[0]?.content?.parts || []) {
-        if (part.inlineData) {
-          const imageUrl = `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
-          setEditedImage(imageUrl);
-          setCredits(prev => prev - 1);
-          foundImage = true;
-          break;
-        }
-      }
-      
-      if (!foundImage) {
-        setError("Failed to generate image. Please try a different prompt.");
-      }
-    } catch (err: any) {
-      console.error("Edit error:", err);
-      setError(err.message || "An error occurred while editing the image.");
-    } finally {
-      setIsEditing(false);
-    }
   };
 
   const handleDownload = () => {
@@ -528,7 +397,7 @@ export default function App() {
       a.click();
       document.body.removeChild(a);
     } else {
-      const imageToDownload = editedImage || capturedImage;
+      const imageToDownload = capturedImage;
       if (imageToDownload) {
         const a = document.createElement('a');
         a.href = imageToDownload;
@@ -623,10 +492,10 @@ export default function App() {
           />
         )}
         
-        {/* Captured / Edited Image */}
+        {/* Captured Image */}
         {capturedImage && !recordedVideo && (
           <img 
-            src={editedImage || capturedImage} 
+            src={capturedImage} 
             className="absolute inset-0 w-full h-full object-contain" 
             alt="Captured photo" 
           />
@@ -657,19 +526,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Loading Overlay for Edits */}
-        {isEditing && (
-          <div className="absolute inset-0 bg-black/60 z-30 flex flex-col items-center justify-center backdrop-blur-sm">
-            <div className="relative flex justify-center items-center">
-              <div className="absolute w-16 h-16 rounded-full border-4 border-blue-500 border-t-transparent animate-spin z-10"></div>
-              <div className="absolute w-20 h-20 rounded-full bg-blue-500/30 blur-md animate-pulse"></div>
-            </div>
-            <p className="mt-6 font-semibold text-lg animate-pulse tracking-wide">Editing Image...</p>
-          </div>
-        )}
-
         {/* Error Message */}
-        {error && !isEditing && (
+        {error && (
           <div className="absolute top-20 left-4 right-4 bg-red-500/90 text-white p-4 rounded-xl z-40 backdrop-blur-md shadow-lg flex items-start justify-between">
             <p className="text-sm font-medium">{error}</p>
             <button onClick={() => setError(null)} className="ml-4 text-white/80 hover:text-white">
@@ -717,9 +575,9 @@ export default function App() {
         )}
 
         {/* Top Actions (Retake / Download) */}
-        {(capturedImage || recordedVideo) && !isEditing && (
+        {(capturedImage || recordedVideo) && (
           <div className="absolute top-4 right-4 mt-16 flex gap-2 z-50">
-            {(editedImage || recordedVideo) && (
+            {(capturedImage || recordedVideo) && (
               <button 
                 onClick={handleDownload}
                 className="bg-blue-600/80 px-3 py-1.5 rounded-full text-xs backdrop-blur-md hover:bg-blue-600 transition-colors border border-blue-500/50 flex items-center gap-1.5"
