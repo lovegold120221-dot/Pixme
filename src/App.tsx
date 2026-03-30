@@ -6,11 +6,11 @@ import { RefreshCw, Sparkles, X, Download, SwitchCamera, ZoomIn, ZoomOut, Upload
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 const STYLES = [
-  { name: "Clean Girl", icon: <Sparkles size={24} />, prompt: "Keep the person's identity identical. Apply a 'Clean girl' aesthetic filter, flawless dewy glass skin, minimal natural makeup, brushed up brows, glossy lips, soft flattering sunlight, photorealistic portrait, 8k resolution, highly detailed." },
-  { name: "Bold Glam", icon: <Crown size={24} />, prompt: "Keep the person's identity identical. Apply a bold glam makeup filter, sharp face contour, dramatic eyelashes, winged eyeliner, matte lips, studio ring light, flawless skin, professional beauty photography, 8k." },
-  { name: "Douyin", icon: <Heart size={24} />, prompt: "Keep the person's identity identical. Apply a trendy Douyin makeup filter, manhua lashes, glittery eyeshadow, gradient blurred lips, pale smooth skin, soft focus, ethereal lighting, highly detailed portrait." },
-  { name: "Vintage", icon: <Camera size={24} />, prompt: "Keep the person's identity identical. Apply a 90s vintage disposable camera filter, film grain, light leaks, slightly faded colors, nostalgic aesthetic, direct flash photography look, polaroid style." },
-  { name: "K-Pop", icon: <Star size={24} />, prompt: "Keep the person's identity identical. Apply a K-Pop idol stage look, vibrant neon rim lighting, glitter makeup, high contrast, trendy music video aesthetic, professional stage photography." },
+  { name: "Clean Girl", icon: <Sparkles size={20} strokeWidth={1.5} />, prompt: "Keep the person's identity identical. Apply a 'Clean girl' aesthetic filter, flawless dewy glass skin, minimal natural makeup, brushed up brows, glossy lips, soft flattering sunlight, photorealistic portrait, 8k resolution, highly detailed." },
+  { name: "Bold Glam", icon: <Crown size={20} strokeWidth={1.5} />, prompt: "Keep the person's identity identical. Apply a bold glam makeup filter, sharp face contour, dramatic eyelashes, winged eyeliner, matte lips, studio ring light, flawless skin, professional beauty photography, 8k." },
+  { name: "Douyin", icon: <Heart size={20} strokeWidth={1.5} />, prompt: "Keep the person's identity identical. Apply a trendy Douyin makeup filter, manhua lashes, glittery eyeshadow, gradient blurred lips, pale smooth skin, soft focus, ethereal lighting, highly detailed portrait." },
+  { name: "Vintage", icon: <Camera size={20} strokeWidth={1.5} />, prompt: "Keep the person's identity identical. Apply a 90s vintage disposable camera filter, film grain, light leaks, slightly faded colors, nostalgic aesthetic, direct flash photography look, polaroid style." },
+  { name: "K-Pop", icon: <Star size={20} strokeWidth={1.5} />, prompt: "Keep the person's identity identical. Apply a K-Pop idol stage look, vibrant neon rim lighting, glitter makeup, high contrast, trendy music video aesthetic, professional stage photography." },
 ];
 
 const ROOM_ANGLES = [
@@ -105,6 +105,8 @@ export default function App() {
   const [credits, setCredits] = useState(5);
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isAutoEnhanceEnabled, setIsAutoEnhanceEnabled] = useState(true);
+  const [showPresets, setShowPresets] = useState(false);
   const [isAutoEnhancing, setIsAutoEnhancing] = useState(false);
   const [showRoomsMenu, setShowRoomsMenu] = useState(false);
   const [showIdMenu, setShowIdMenu] = useState(false);
@@ -185,7 +187,7 @@ export default function App() {
           setIsZoomSupported(true);
           setMinZoom(capabilities.zoom.min || 1);
           setMaxZoom(capabilities.zoom.max || 3);
-          setZoom(track.getSettings().zoom || capabilities.zoom.min || 1);
+          setZoom((track.getSettings() as any).zoom || capabilities.zoom.min || 1);
         } else {
           setIsZoomSupported(false);
         }
@@ -399,8 +401,9 @@ export default function App() {
         setCapturedImage(base64Image);
         stopCamera();
         const base64Data = base64Image.split(',')[1];
-        analyzeImage(base64Data);
-        autoEnhanceImage(base64Data);
+        if (isAutoEnhanceEnabled) {
+          autoEnhanceImage(base64Data);
+        }
       }
     }
   };
@@ -540,16 +543,67 @@ export default function App() {
   return (
     <div className="bg-black text-white h-[100dvh] w-full overflow-hidden flex flex-col relative font-sans selection:bg-blue-500 selection:text-white">
       {/* Header */}
-      <div className="absolute top-0 w-full p-4 z-20 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent pointer-events-none">
-        <div className="w-20"></div> {/* Spacer for centering */}
-        <h1 className="text-xl font-medium tracking-widest drop-shadow-md text-white/90">PixMe</h1>
-        <div className="w-20 flex justify-end pointer-events-auto">
-          <div className="bg-black/40 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-1.5 shadow-lg">
-            <Sparkles size={12} className="text-blue-400" />
-            <span className="text-xs font-medium text-white">{credits}</span>
-          </div>
+      <div className="absolute top-0 w-full p-4 z-50 flex justify-between items-center bg-gradient-to-b from-black/80 to-transparent">
+        <button 
+          onClick={() => setIsAutoEnhanceEnabled(!isAutoEnhanceEnabled)}
+          className={`flex items-center gap-2 px-3 py-1.5 rounded-full backdrop-blur-md border transition-all ${
+            isAutoEnhanceEnabled 
+              ? 'bg-blue-500/20 border-blue-500/50 text-blue-400' 
+              : 'bg-black/40 border-white/10 text-white/60'
+          }`}
+        >
+          <Wand2 size={14} strokeWidth={1.5} />
+          <span className="text-[10px] uppercase tracking-wider font-bold">
+            Auto-Enhance: {isAutoEnhanceEnabled ? 'ON' : 'OFF'}
+          </span>
+        </button>
+
+        <div className="flex items-center gap-3">
+          {captureMode === 'photo' && (
+            <button 
+              onClick={() => setShowPresets(!showPresets)}
+              className={`p-2.5 rounded-full backdrop-blur-md border transition-all ${
+                showPresets 
+                  ? 'bg-white/20 border-white/40 text-white' 
+                  : 'bg-black/40 border-white/10 text-white/60'
+              }`}
+              title="Sample Presets"
+            >
+              <Sparkles size={18} strokeWidth={1.5} />
+            </button>
+          )}
+          
+          <button
+            onClick={toggleCamera}
+            disabled={isRecording}
+            className={`bg-black/40 p-2.5 rounded-full text-white/90 backdrop-blur-md transition-colors border border-white/10 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black/60'}`}
+            aria-label="Toggle Camera"
+          >
+            <SwitchCamera size={18} strokeWidth={1.5} />
+          </button>
         </div>
       </div>
+
+      {/* Presets Menu (Top) */}
+      {showPresets && captureMode === 'photo' && !capturedImage && !recordedVideo && (
+        <div className="absolute top-20 left-0 w-full px-4 py-3 z-40 bg-black/40 backdrop-blur-md border-b border-white/5 animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex overflow-x-auto gap-2 pb-1 scrollbar-hide justify-center">
+            {ENHANCEMENT_PRESETS.map(preset => (
+              <button
+                key={preset.name}
+                onClick={() => setSelectedPreset(preset.name)}
+                className={`px-4 py-2 rounded-xl text-[10px] uppercase tracking-wider font-bold whitespace-nowrap transition-all ${
+                  selectedPreset === preset.name 
+                    ? 'bg-white text-black shadow-lg' 
+                    : 'bg-white/5 text-white/60 border border-white/5 hover:bg-white/10'
+                }`}
+              >
+                {preset.name}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Main Viewport */}
       <div className="flex-1 relative flex items-center justify-center bg-zinc-900 w-full h-full overflow-hidden">
@@ -619,340 +673,69 @@ export default function App() {
           <div className="absolute top-20 left-4 right-4 bg-red-500/90 text-white p-4 rounded-xl z-40 backdrop-blur-md shadow-lg flex items-start justify-between">
             <p className="text-sm font-medium">{error}</p>
             <button onClick={() => setError(null)} className="ml-4 text-white/80 hover:text-white">
-              <X size={20} />
+              <X size={18} strokeWidth={1.5} />
             </button>
           </div>
         )}
 
-        {/* Enhancement Presets */}
-        {!capturedImage && !recordedVideo && !isRecording && (
-          <div className="absolute bottom-24 w-full px-4 overflow-x-auto scrollbar-hide flex gap-2 z-20 justify-center">
-            {ENHANCEMENT_PRESETS.map(preset => (
-              <button
-                key={preset.name}
-                onClick={() => setSelectedPreset(preset.name)}
-                className={`px-3 py-1.5 rounded-full text-[10px] uppercase tracking-wider font-medium whitespace-nowrap backdrop-blur-md transition-all ${
-                  selectedPreset === preset.name 
-                    ? 'bg-white/90 text-black shadow-[0_0_10px_rgba(255,255,255,0.3)]' 
-                    : 'bg-black/40 text-white/70 border border-white/10 hover:bg-black/60'
-                }`}
-              >
-                {preset.name}
-              </button>
-            ))}
-          </div>
-        )}
-
-        {/* Capture Button */}
+        {/* Capture Button Container */}
         {!capturedImage && !recordedVideo && (
-          <>
-            <button 
-              onClick={handleCaptureClick}
-              className={`absolute bottom-16 left-1/2 -translate-x-1/2 w-16 h-16 rounded-full border-2 shadow-[0_0_15px_rgba(0,0,0,0.3)] active:scale-90 transition-all z-10 flex items-center justify-center ${captureMode === 'video' ? 'border-red-500/80 bg-transparent' : 'border-white/80 bg-white/20 backdrop-blur-sm'}`}
-            >
-              {captureMode === 'video' ? (
-                <div className={`rounded-sm bg-red-500 transition-all ${isRecording ? 'w-6 h-6' : 'w-[80%] h-[80%] rounded-full'}`}></div>
-              ) : (
-                <div className="w-[85%] h-[85%] rounded-full bg-white shadow-sm"></div>
-              )}
-            </button>
-
+          <div className="absolute bottom-0 w-full p-8 flex flex-col items-center gap-6 bg-gradient-to-t from-black/80 to-transparent z-20">
             {/* Photo/Video Toggle */}
             {!isRecording && (
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 bg-black/40 p-1 rounded-full backdrop-blur-md z-20">
+              <div className="flex gap-1 bg-black/40 p-1 rounded-full backdrop-blur-md border border-white/5">
                 <button 
                   onClick={() => setCaptureMode('photo')}
-                  className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-medium transition-colors ${captureMode === 'photo' ? 'bg-white/90 text-black' : 'text-white/60 hover:text-white'}`}
+                  className={`px-5 py-1.5 rounded-full text-[10px] uppercase tracking-widest font-bold transition-all ${captureMode === 'photo' ? 'bg-white text-black shadow-md' : 'text-white/40 hover:text-white/70'}`}
                 >
                   Photo
                 </button>
                 <button 
                   onClick={() => setCaptureMode('video')}
-                  className={`px-3 py-1 rounded-full text-[10px] uppercase tracking-wider font-medium transition-colors ${captureMode === 'video' ? 'bg-white/90 text-black' : 'text-white/60 hover:text-white'}`}
+                  className={`px-5 py-1.5 rounded-full text-[10px] uppercase tracking-widest font-bold transition-all ${captureMode === 'video' ? 'bg-white text-black shadow-md' : 'text-white/40 hover:text-white/70'}`}
                 >
                   Video
                 </button>
               </div>
             )}
 
-            {/* Video Quality Selector */}
-            {captureMode === 'video' && !isRecording && (
-              <div className="absolute top-4 left-4 mt-12 z-20">
-                <button 
-                  onClick={() => setShowQualityMenu(!showQualityMenu)}
-                  className="bg-black/40 px-3 py-1.5 rounded-full text-white/90 backdrop-blur-md hover:bg-black/60 transition-colors border border-white/10 flex items-center gap-1.5 text-xs font-medium"
-                >
-                  <Settings size={12} /> {videoQuality.toUpperCase()}
-                </button>
-                {showQualityMenu && (
-                  <div className="absolute top-full left-0 mt-2 bg-black/80 backdrop-blur-md border border-white/10 rounded-xl overflow-hidden flex flex-col w-24">
-                    {(['720p', '1080p', '4k'] as const).map(q => (
-                      <button 
-                        key={q}
-                        onClick={() => { setVideoQuality(q); setShowQualityMenu(false); }}
-                        className={`px-3 py-2 text-xs text-left hover:bg-white/10 transition-colors ${videoQuality === q ? 'text-blue-400 font-bold' : 'text-white/80'}`}
-                      >
-                        {q.toUpperCase()}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Camera Toggle Button */}
-            <button
-              onClick={toggleCamera}
-              disabled={isRecording}
-              className={`absolute top-4 right-4 mt-12 bg-black/40 p-2.5 rounded-full text-white/90 backdrop-blur-md transition-colors border border-white/10 z-20 ${isRecording ? 'opacity-50 cursor-not-allowed' : 'hover:bg-black/60'}`}
-              aria-label="Toggle Camera"
+            <button 
+              onClick={handleCaptureClick}
+              className={`w-20 h-20 rounded-full border-4 shadow-2xl active:scale-95 transition-all flex items-center justify-center ${
+                captureMode === 'video' 
+                  ? 'border-red-500/50 bg-red-500/10' 
+                  : 'border-white/50 bg-white/10'
+              }`}
             >
-              <SwitchCamera size={18} />
+              {captureMode === 'video' ? (
+                <div className={`bg-red-500 transition-all ${isRecording ? 'w-8 h-8 rounded-md' : 'w-14 h-14 rounded-full'}`}></div>
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-white"></div>
+              )}
             </button>
-
-            {/* Zoom Slider */}
-            {isZoomSupported && (
-              <div className="absolute bottom-36 left-1/2 -translate-x-1/2 w-48 px-3 py-1.5 bg-black/40 rounded-full backdrop-blur-md z-20 flex items-center gap-2 border border-white/10">
-                <ZoomOut size={14} className="text-white/60" />
-                <input
-                  type="range"
-                  min={minZoom}
-                  max={maxZoom}
-                  step="0.1"
-                  value={zoom}
-                  onChange={handleZoomChange}
-                  className="flex-1 h-0.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-white"
-                />
-                <ZoomIn size={14} className="text-white/60" />
-              </div>
-            )}
-          </>
+          </div>
         )}
 
         {/* Top Actions (Retake / Download) */}
         {(capturedImage || recordedVideo) && !isEditing && (
-          <div className="absolute top-4 right-4 mt-12 flex gap-2 z-20">
+          <div className="absolute top-4 right-4 mt-16 flex gap-2 z-50">
             {(editedImage || recordedVideo) && (
               <button 
                 onClick={handleDownload}
-                className="bg-blue-600/80 px-4 py-2 rounded-full text-sm backdrop-blur-md hover:bg-blue-600 transition-colors border border-blue-500/50 flex items-center gap-2"
+                className="bg-blue-600/80 px-3 py-1.5 rounded-full text-xs backdrop-blur-md hover:bg-blue-600 transition-colors border border-blue-500/50 flex items-center gap-1.5"
               >
-                <Download size={16} /> Save
+                <Download size={14} strokeWidth={1.5} /> Save
               </button>
             )}
             <button 
               onClick={retakePhoto}
-              className="bg-black/50 px-4 py-2 rounded-full text-sm backdrop-blur-md hover:bg-black/70 transition-colors border border-white/20 flex items-center gap-2"
+              className="bg-black/50 px-3 py-1.5 rounded-full text-xs backdrop-blur-md hover:bg-black/70 transition-colors border border-white/20 flex items-center gap-1.5"
             >
-              <X size={16} /> Retake
+              <X size={14} strokeWidth={1.5} /> Retake
             </button>
           </div>
         )}
       </div>
-
-      {/* Bottom Pop-up */}
-      {capturedImage && !recordedVideo && !isEditing && (
-        <div className="absolute bottom-0 w-full bg-zinc-950/90 backdrop-blur-xl p-4 pb-6 rounded-t-3xl shadow-[0_-10px_40px_rgba(0,0,0,0.5)] z-40 border-t border-white/5 animate-in slide-in-from-bottom-full duration-300">
-          
-          <div className="flex justify-between items-center mb-4 ml-2">
-            <p className="text-xs text-zinc-400 font-medium tracking-wide">WHAT TO FIX?</p>
-            {editedImage && (
-              <button 
-                onClick={() => setEditedImage(null)}
-                className="text-[10px] uppercase tracking-wider text-blue-400/80 hover:text-blue-300 flex items-center gap-1"
-              >
-                <RefreshCw size={10} /> Revert
-              </button>
-            )}
-          </div>
-
-          {/* Presets & Upload */}
-          <div className="flex overflow-x-auto gap-4 mb-5 pb-2 scrollbar-hide -mx-4 px-4 items-start">
-            {showRoomsMenu ? (
-              <>
-                <button onClick={() => setShowRoomsMenu(false)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-white/5 bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 transition-colors">
-                    <ChevronLeft size={20} />
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-medium">Back</span>
-                </button>
-                <div className="w-px h-8 bg-white/10 my-auto flex-shrink-0"></div>
-                {ROOM_ANGLES.map(room => (
-                  <button key={room.name} onClick={() => { setPrompt(room.prompt); setUploadedBg(null); setSelectedAspectRatio(null); }} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <img src={room.thumb} alt={room.name} className="w-12 h-12 rounded-full object-cover border border-white/10" />
-                    <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-medium w-14 truncate text-center">{room.name}</span>
-                  </button>
-                ))}
-              </>
-            ) : showUniformsMenu ? (
-              <>
-                <button onClick={() => setShowUniformsMenu(false)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-white/5 bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 transition-colors">
-                    <ChevronLeft size={20} />
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-medium">Back</span>
-                </button>
-                <div className="w-px h-8 bg-white/10 my-auto flex-shrink-0"></div>
-                {UNIFORMS.map(uniform => (
-                  <button key={uniform.name} onClick={() => { setPrompt(uniform.prompt); setUploadedBg(null); setSelectedAspectRatio(null); }} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <img src={uniform.thumb} alt={uniform.name} className="w-12 h-12 rounded-full object-cover border border-white/10" />
-                    <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-medium w-14 truncate text-center">{uniform.name}</span>
-                  </button>
-                ))}
-              </>
-            ) : showIdMenu ? (
-              <>
-                <button onClick={() => setShowIdMenu(false)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-white/5 bg-white/5 flex items-center justify-center text-zinc-400 hover:bg-white/10 transition-colors">
-                    <ChevronLeft size={20} />
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider text-zinc-500 font-medium">Back</span>
-                </button>
-                <div className="w-px h-8 bg-white/10 my-auto flex-shrink-0"></div>
-                {ID_PHOTOS.map(idPhoto => (
-                  <button key={idPhoto.name} onClick={() => { setPrompt(idPhoto.prompt); setUploadedBg(null); setSelectedAspectRatio(idPhoto.aspectRatio); }} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <img src={idPhoto.thumb} alt={idPhoto.name} className="w-12 h-12 rounded-full object-cover border border-white/10" />
-                    <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-medium w-14 truncate text-center">{idPhoto.name}</span>
-                  </button>
-                ))}
-              </>
-            ) : (
-              <>
-                {/* Upload Button */}
-                <button onClick={handleUploadClick} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-blue-500/20 bg-blue-500/10 flex items-center justify-center text-blue-400 hover:bg-blue-500/20 transition-colors">
-                    <Upload size={18} />
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-medium">Upload</span>
-                </button>
-
-                {/* AI Suggestions */}
-                {isAnalyzing ? (
-                  <div className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full border border-purple-500/20 bg-purple-500/10 flex items-center justify-center text-purple-400 animate-pulse">
-                      <Sparkles size={18} />
-                    </div>
-                    <span className="text-[9px] uppercase tracking-wider text-purple-400 font-medium">Analyzing</span>
-                  </div>
-                ) : aiSuggestions.map((sug, i) => (
-                  <button key={`ai-${i}`} onClick={() => { setPrompt(sug); setSelectedAspectRatio(null); }} className="flex flex-col items-center gap-1.5 flex-shrink-0 w-14">
-                    <div className="w-12 h-12 rounded-full border border-purple-500/20 bg-purple-500/10 flex items-center justify-center text-purple-400 hover:bg-purple-500/20 transition-colors">
-                      <Sparkles size={18} />
-                    </div>
-                    <span className="text-[8px] text-zinc-400 text-center leading-tight line-clamp-2">{sug}</span>
-                  </button>
-                ))}
-
-                <div className="w-px h-8 bg-white/10 my-auto flex-shrink-0"></div>
-
-                {/* Styles */}
-                {STYLES.map(style => (
-                  <button key={style.name} onClick={() => { setPrompt(style.prompt); setSelectedAspectRatio(null); }} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <div className="w-12 h-12 rounded-full border border-white/5 bg-white/5 flex items-center justify-center text-zinc-300 hover:bg-white/10 transition-colors">
-                      {React.cloneElement(style.icon, { size: 18 })}
-                    </div>
-                    <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-medium">{style.name}</span>
-                  </button>
-                ))}
-
-                <div className="w-px h-8 bg-white/10 my-auto flex-shrink-0"></div>
-
-                {/* ID Photo Button */}
-                <button onClick={() => setShowIdMenu(true)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-emerald-500/20 bg-emerald-500/10 flex items-center justify-center text-emerald-400 hover:bg-emerald-500/20 transition-colors">
-                    <UserSquare size={18} />
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider text-emerald-400 font-medium">ID Photo</span>
-                </button>
-
-                {/* Rooms Button */}
-                <button onClick={() => setShowRoomsMenu(true)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-blue-500/20 bg-blue-500/10 flex items-center justify-center text-blue-400 hover:bg-blue-500/20 transition-colors">
-                    <Home size={18} />
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider text-blue-400 font-medium">Rooms</span>
-                </button>
-
-                {/* Uniforms Button */}
-                <button onClick={() => setShowUniformsMenu(true)} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-orange-500/20 bg-orange-500/10 flex items-center justify-center text-orange-400 hover:bg-orange-500/20 transition-colors">
-                    <Shirt size={18} />
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider text-orange-400 font-medium">Uniforms</span>
-                </button>
-
-                {/* Restore Button */}
-                <button onClick={() => { setPrompt("Restore this old photo, convert to 4K HD resolution, colorize realistically, remove scratches, noise, and blur, strictly maintain the exact facial likeness and identity of the person."); setSelectedAspectRatio(null); }} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                  <div className="w-12 h-12 rounded-full border border-yellow-500/20 bg-yellow-500/10 flex items-center justify-center text-yellow-400 hover:bg-yellow-500/20 transition-colors">
-                    <Wand2 size={18} />
-                  </div>
-                  <span className="text-[9px] uppercase tracking-wider text-yellow-400 font-medium">Restore</span>
-                </button>
-
-                <div className="w-px h-8 bg-white/10 my-auto flex-shrink-0"></div>
-
-                {/* Backgrounds */}
-                {BACKGROUNDS.map(bg => (
-                  <button key={bg.name} onClick={() => { setPrompt(bg.prompt || `Change background to ${bg.name}`); setUploadedBg(null); setSelectedAspectRatio(null); }} className="flex flex-col items-center gap-1.5 flex-shrink-0">
-                    <img src={bg.thumb} alt={bg.name} className="w-12 h-12 rounded-full object-cover border border-white/10" />
-                    <span className="text-[9px] uppercase tracking-wider text-zinc-400 font-medium w-14 truncate text-center">{bg.name}</span>
-                  </button>
-                ))}
-              </>
-            )}
-          </div>
-
-          {/* Uploaded Background Preview */}
-          {uploadedBg && (
-            <div className="mb-4 flex items-center gap-3 bg-white/5 p-2 rounded-xl border border-white/10">
-              <img src={uploadedBg} alt="Uploaded background" className="w-10 h-10 object-cover rounded-lg" />
-              <div className="flex-1">
-                <p className="text-xs font-medium text-white/90">Custom Background</p>
-                <p className="text-[10px] text-zinc-400">Ready to apply</p>
-              </div>
-              <button 
-                onClick={() => {
-                  setUploadedBg(null);
-                  setPrompt('');
-                }}
-                className="p-1.5 text-zinc-400 hover:text-white hover:bg-white/10 rounded-full transition-colors"
-                aria-label="Remove uploaded background"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
-          {/* Input Area */}
-          <div className="flex gap-2">
-            <input 
-              type="text" 
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
-              placeholder="e.g., Make the background blue..." 
-              className="flex-1 bg-white/5 text-white/90 px-4 py-3 text-sm rounded-2xl outline-none border border-white/10 focus:border-blue-500/50 transition-colors placeholder:text-zinc-500"
-            />
-            <button 
-              onClick={handleEdit}
-              disabled={!prompt.trim() || isEditing}
-              className="bg-blue-600/90 hover:bg-blue-500 active:scale-95 text-white text-sm font-medium px-5 py-3 rounded-2xl transition-all disabled:opacity-50 disabled:active:scale-100 shadow-lg shadow-blue-500/20 flex items-center gap-1.5"
-            >
-              <Sparkles size={16} />
-              FixMe
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Hidden File Input */}
-      <input 
-        type="file" 
-        ref={fileInputRef} 
-        onChange={handleFileChange} 
-        accept="image/*" 
-        className="hidden" 
-      />
     </div>
   );
 }
