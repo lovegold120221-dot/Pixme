@@ -1,0 +1,8 @@
+{
+  "name": "PixMe",
+  "description": "AI-powered camera app to take and edit photos using Gemini.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ]
+}
