@@ -101,6 +101,8 @@ export default function App() {
   const [isAutoEnhanceEnabled, setIsAutoEnhanceEnabled] = useState(true);
   const [showPresets, setShowPresets] = useState(false);
   const [isAutoEnhancing, setIsAutoEnhancing] = useState(false);
+  const [isProcessingAI, setIsProcessingAI] = useState(false);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Video recording state
@@ -128,6 +130,50 @@ export default function App() {
       setSelectedPreset('Natural'); // Auto-beautify for selfies
     }
   }, [facingMode, selectedPreset]);
+
+  const applyAIEffect = async (effectPrompt: string, aspectRatio?: string) => {
+    if (!capturedImage) return;
+    setIsProcessingAI(true);
+    setError(null);
+    try {
+      const base64Data = capturedImage.split(',')[1];
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash-image',
+        contents: [
+          {
+            inlineData: {
+              data: base64Data,
+              mimeType: 'image/jpeg',
+            },
+          },
+          {
+            text: effectPrompt,
+          },
+        ],
+        config: aspectRatio ? { imageConfig: { aspectRatio } as any } : undefined
+      });
+
+      let foundImage = false;
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData?.data) {
+          const imageUrl = `data:${part.inlineData.mimeType || 'image/jpeg'};base64,${part.inlineData.data}`;
+          setCapturedImage(imageUrl);
+          foundImage = true;
+          break;
+        }
+      }
+      if (!foundImage) {
+        setError("AI failed to process the image. Please try again.");
+      }
+    } catch (err) {
+      console.error("AI Effect error:", err);
+      setError("AI processing failed. Please check your connection.");
+    } finally {
+      setIsProcessingAI(false);
+      setActiveMenu(null);
+    }
+  };
 
   const startCamera = async (mode = facingMode, quality = videoQuality, cMode = captureMode) => {
     try {
@@ -385,6 +431,7 @@ export default function App() {
       setRecordedVideo(null);
     }
     setError(null);
+    setActiveMenu(null);
     startCamera(facingMode, videoQuality, captureMode);
   };
 
@@ -516,13 +563,15 @@ export default function App() {
         <canvas ref={canvasRef} className="hidden" />
 
         {/* Loading Overlay for Auto-Enhance */}
-        {isAutoEnhancing && (
+        {(isAutoEnhancing || isProcessingAI) && (
           <div className="absolute inset-0 bg-black/60 z-30 flex flex-col items-center justify-center backdrop-blur-sm">
             <div className="relative flex justify-center items-center">
               <div className="absolute w-16 h-16 rounded-full border-4 border-purple-500 border-t-transparent animate-spin z-10"></div>
               <div className="absolute w-20 h-20 rounded-full bg-purple-500/30 blur-md animate-pulse"></div>
             </div>
-            <p className="mt-6 font-semibold text-lg animate-pulse tracking-wide text-purple-300">Auto-Enhancing...</p>
+            <p className="mt-6 font-semibold text-lg animate-pulse tracking-wide text-purple-300">
+              {isAutoEnhancing ? 'Auto-Enhancing...' : 'Applying Magic...'}
+            </p>
           </div>
         )}
 
@@ -571,6 +620,101 @@ export default function App() {
                 <div className="w-14 h-14 rounded-full bg-white"></div>
               )}
             </button>
+          </div>
+        )}
+
+        {/* AI Magic Menus (Bottom) */}
+        {capturedImage && !recordedVideo && !isProcessingAI && (
+          <div className="absolute bottom-0 w-full p-6 flex flex-col gap-4 bg-gradient-to-t from-black/90 to-transparent z-20">
+            {/* Category Selector */}
+            <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide justify-center">
+              {[
+                { id: 'uniforms', label: 'Uniforms', icon: <Shirt size={14} /> },
+                { id: 'backgrounds', label: 'Backgrounds', icon: <ImageIcon size={14} /> },
+                { id: 'id', label: 'ID Photos', icon: <UserSquare size={14} /> },
+                { id: 'angles', label: 'Angles', icon: <Eye size={14} /> },
+                { id: 'styles', label: 'Styles', icon: <Sparkles size={14} /> },
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  onClick={() => setActiveMenu(activeMenu === cat.id ? null : cat.id)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-[10px] uppercase tracking-widest font-bold transition-all border ${
+                    activeMenu === cat.id 
+                      ? 'bg-white text-black border-white' 
+                      : 'bg-black/40 text-white/60 border-white/10 hover:bg-black/60'
+                  }`}
+                >
+                  {cat.icon}
+                  {cat.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Options List */}
+            {activeMenu && (
+              <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide animate-in fade-in slide-in-from-bottom-4 duration-300">
+                {activeMenu === 'uniforms' && UNIFORMS.map(item => (
+                  <button
+                    key={item.name}
+                    onClick={() => applyAIEffect(item.prompt)}
+                    className="flex flex-col items-center gap-2 min-w-[70px] group"
+                  >
+                    <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-white/50 transition-all shadow-lg">
+                      <img src={item.thumb} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                    <span className="text-[9px] uppercase tracking-tighter font-bold text-white/70 group-hover:text-white">{item.name}</span>
+                  </button>
+                ))}
+                {activeMenu === 'backgrounds' && BACKGROUNDS.map(item => (
+                  <button
+                    key={item.name}
+                    onClick={() => applyAIEffect(`Keep the person's identity and facial likeness exactly identical to the original photo. Flawlessly and cleanly replace the background with a highly realistic ${item.name} setting. The integration must be absolutely seamless, with perfect lighting and shadow matching.`)}
+                    className="flex flex-col items-center gap-2 min-w-[70px] group"
+                  >
+                    <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-white/50 transition-all shadow-lg">
+                      <img src={item.thumb} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                    <span className="text-[9px] uppercase tracking-tighter font-bold text-white/70 group-hover:text-white">{item.name}</span>
+                  </button>
+                ))}
+                {activeMenu === 'id' && ID_PHOTOS.map(item => (
+                  <button
+                    key={item.name}
+                    onClick={() => applyAIEffect(item.prompt, item.aspectRatio)}
+                    className="flex flex-col items-center gap-2 min-w-[70px] group"
+                  >
+                    <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-white/50 transition-all shadow-lg">
+                      <img src={item.thumb} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                    <span className="text-[9px] uppercase tracking-tighter font-bold text-white/70 group-hover:text-white">{item.name}</span>
+                  </button>
+                ))}
+                {activeMenu === 'angles' && ROOM_ANGLES.map(item => (
+                  <button
+                    key={item.name}
+                    onClick={() => applyAIEffect(item.prompt)}
+                    className="flex flex-col items-center gap-2 min-w-[70px] group"
+                  >
+                    <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-white/50 transition-all shadow-lg">
+                      <img src={item.thumb} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                    <span className="text-[9px] uppercase tracking-tighter font-bold text-white/70 group-hover:text-white">{item.name}</span>
+                  </button>
+                ))}
+                {activeMenu === 'styles' && STYLES.map(item => (
+                  <button
+                    key={item.name}
+                    onClick={() => applyAIEffect(item.prompt)}
+                    className="flex flex-col items-center gap-2 min-w-[70px] group"
+                  >
+                    <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-purple-500/20 to-blue-500/20 flex items-center justify-center border-2 border-transparent group-hover:border-white/50 transition-all shadow-lg">
+                      {item.icon}
+                    </div>
+                    <span className="text-[9px] uppercase tracking-tighter font-bold text-white/70 group-hover:text-white">{item.name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
