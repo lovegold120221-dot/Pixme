@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
-import { RefreshCw, Sparkles, X, Download, SwitchCamera, ZoomIn, ZoomOut, Upload, Image as ImageIcon, CreditCard, Wand2, Eye, Aperture, Heart, Star, Camera, Crown, Home, ChevronLeft, UserSquare, Video, Circle, Square, Settings, Shirt } from 'lucide-react';
+import { RefreshCw, Sparkles, X, Download, SwitchCamera, ZoomIn, ZoomOut, Upload, Image as ImageIcon, CreditCard, Wand2, Eye, Aperture, Heart, Star, Camera, Crown, Home, ChevronLeft, UserSquare, Video, Circle, Square, Settings, Shirt, GraduationCap } from 'lucide-react';
 
 // Initialize Gemini API
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -37,6 +37,29 @@ const ID_PHOTOS = [
   { name: "Social Profile", thumb: "https://picsum.photos/seed/social/100/100", prompt: "Keep the person's identity and facial likeness exactly identical to the original photo. Convert this selfie into a highly professional, formal social media profile picture (like LinkedIn). Change the subject's clothing to a stylish formal business suit or smart casual attire. The background should be a blurred, modern aesthetic office or cafe. Ensure flattering, high-end portrait lighting.", aspectRatio: "1:1" },
 ];
 
+const GRADUATION = [
+  { name: 'Classic Black', prompt: 'Change clothing to a highly realistic classic black graduation gown and cap (toga) with a gold tassel, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradblack/100/100' },
+  { name: 'Navy Blue', prompt: 'Change clothing to a highly realistic navy blue graduation gown and cap, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradnavy/100/100' },
+  { name: 'White Gown', prompt: 'Change clothing to a highly realistic white graduation gown and cap, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradwhite/100/100' },
+  { name: 'Maroon Gown', prompt: 'Change clothing to a highly realistic maroon/burgundy graduation gown and cap, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradmaroon/100/100' },
+  { name: 'Forest Green', prompt: 'Change clothing to a highly realistic forest green graduation gown and cap, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradgreen/100/100' },
+  { name: 'PhD Velvet', prompt: 'Change clothing to a highly realistic PhD doctoral robe with velvet panels and bell sleeves, tam cap, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradphd/100/100' },
+  { name: 'Master Hood', prompt: 'Change clothing to a highly realistic Master\'s degree graduation gown with a colorful academic hood, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradmaster/100/100' },
+  { name: 'Med School', prompt: 'Change clothing to a highly realistic graduation gown worn over a doctor\'s white coat with a stethoscope, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradmed/100/100' },
+  { name: 'Law School', prompt: 'Change clothing to a highly realistic Juris Doctor graduation gown with purple velvet trim, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradlaw/100/100' },
+  { name: 'With Diploma', prompt: 'Change clothing to a highly realistic graduation gown and cap, subject is holding a rolled diploma with a ribbon, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/graddiploma/100/100' },
+  { name: 'Campus BG', prompt: 'Change clothing to a highly realistic graduation gown and cap, background is a beautiful sunny university campus with brick buildings, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradcampus/100/100' },
+  { name: 'Stage BG', prompt: 'Change clothing to a highly realistic graduation gown and cap, background is a formal graduation stage with curtains and warm lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradstage/100/100' },
+  { name: 'With Flowers', prompt: 'Change clothing to a highly realistic graduation gown and cap, subject is holding a beautiful bouquet of flowers, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradflowers/100/100' },
+  { name: 'Honor Cords', prompt: 'Change clothing to a highly realistic graduation gown and cap, wearing multiple gold honor cords around the neck, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradcords/100/100' },
+  { name: 'Valedictorian', prompt: 'Change clothing to a highly realistic graduation gown and cap, wearing a prominent valedictorian stole sash, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradstole/100/100' },
+  { name: 'Vintage', prompt: 'Change clothing to a highly realistic graduation gown and cap, apply a vintage 1990s film camera aesthetic with slight grain and warm tones, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradvintage/100/100' },
+  { name: 'Cinematic', prompt: 'Change clothing to a highly realistic graduation gown and cap, dramatic cinematic lighting with rim lights and deep shadows, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradcinematic/100/100' },
+  { name: 'Pop Art', prompt: 'Change clothing to a graduation gown and cap, apply a vibrant colorful pop-art aesthetic with bold colors, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradpop/100/100' },
+  { name: 'Silver Tassel', prompt: 'Change clothing to a highly realistic black graduation gown and cap with a silver tassel, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradsilver/100/100' },
+  { name: 'Red Gown', prompt: 'Change clothing to a highly realistic bright red graduation gown and cap, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/gradred/100/100' }
+];
+
 const UNIFORMS = [
   { name: 'Graduation', prompt: 'Change clothing to a highly realistic graduation gown and cap (toga), professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/grad/100/100' },
   { name: 'Police', prompt: 'Change clothing to a highly realistic police officer uniform with badge, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/police/100/100' },
@@ -62,7 +85,27 @@ const UNIFORMS = [
   { name: 'Surgeon', prompt: 'Change clothing to highly realistic surgeon scrubs with a surgical mask pulled down, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/surgeon/100/100' },
   { name: 'Architect', prompt: 'Change clothing to a highly realistic architect smart casual outfit holding blueprints, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/architect/100/100' },
   { name: 'Detective', prompt: 'Change clothing to a highly realistic detective trench coat, cinematic lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/detective/100/100' },
-  { name: 'News Anchor', prompt: 'Change clothing to a highly realistic news anchor formal suit, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/newsanchor/100/100' }
+  { name: 'News Anchor', prompt: 'Change clothing to a highly realistic news anchor formal suit, professional studio lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/newsanchor/100/100' },
+  { name: 'Dentist', prompt: 'Change clothing to a highly realistic dentist in scrubs with dental loupe glasses, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/dentist/100/100' },
+  { name: 'Veterinarian', prompt: 'Change clothing to a highly realistic veterinarian in scrubs holding a small cute puppy or kitten, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/vet/100/100' },
+  { name: 'Pharmacist', prompt: 'Change clothing to a highly realistic pharmacist in a white coat standing in a pharmacy, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/pharmacist/100/100' },
+  { name: 'Software Dev', prompt: 'Change clothing to a highly realistic software developer in a casual tech company hoodie, modern office background, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/dev/100/100' },
+  { name: 'Inv. Banker', prompt: 'Change clothing to a highly realistic investment banker in a high-end pinstripe suit and tie, Wall Street office background, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/banker/100/100' },
+  { name: 'Real Estate', prompt: 'Change clothing to a highly realistic real estate agent in a sharp blazer, standing in a luxury home, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/realestate/100/100' },
+  { name: 'Military Gen.', prompt: 'Change clothing to a highly realistic military general uniform with multiple medals and ribbons, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/general/100/100' },
+  { name: 'SWAT Officer', prompt: 'Change clothing to a highly realistic SWAT police officer in tactical gear, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/swat/100/100' },
+  { name: 'Construction', prompt: 'Change clothing to a highly realistic construction worker in a high-visibility jacket and hard hat, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/construction/100/100' },
+  { name: 'Electrician', prompt: 'Change clothing to a highly realistic electrician with a tool belt, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/electrician/100/100' },
+  { name: 'Sushi Chef', prompt: 'Change clothing to a highly realistic traditional sushi chef uniform (itamae), professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/sushichef/100/100' },
+  { name: 'Baker', prompt: 'Change clothing to a highly realistic baker with a white apron covered in a little flour, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/baker/100/100' },
+  { name: 'Vintage Flight', prompt: 'Change clothing to a highly realistic 1960s vintage flight attendant uniform, retro aesthetic, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/vintageflight/100/100' },
+  { name: 'Spacewalk', prompt: 'Change clothing to a highly realistic astronaut in an EVA spacewalk suit with Earth in the background, cinematic lighting, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/spacewalk/100/100' },
+  { name: 'Race Driver', prompt: 'Change clothing to a highly realistic professional race car driver fire suit with sponsor patches, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/racer/100/100' },
+  { name: 'Comm. Diver', prompt: 'Change clothing to a highly realistic commercial deep sea diver suit, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/diver/100/100' },
+  { name: 'Zookeeper', prompt: 'Change clothing to a highly realistic zookeeper uniform in khaki, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/zookeeper/100/100' },
+  { name: 'Park Ranger', prompt: 'Change clothing to a highly realistic national park ranger uniform with a campaign hat, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/ranger/100/100' },
+  { name: 'Librarian', prompt: 'Change clothing to a highly realistic librarian in smart casual attire with reading glasses, library background, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/librarian/100/100' },
+  { name: 'Curator', prompt: 'Change clothing to a highly realistic museum curator in an elegant blazer, art gallery background, professional photography, strictly maintaining exact facial likeness and identity.', thumb: 'https://picsum.photos/seed/curator/100/100' }
 ];
 
 const BACKGROUNDS = [
@@ -641,7 +684,8 @@ export default function App() {
             {/* Category Selector */}
             <div className="flex overflow-x-auto gap-2 pb-2 scrollbar-hide justify-center">
               {[
-                { id: 'uniforms', label: 'Uniforms', icon: <Shirt size={14} /> },
+                { id: 'graduation', label: 'Graduation', icon: <GraduationCap size={14} /> },
+                { id: 'uniforms', label: 'Professions', icon: <Shirt size={14} /> },
                 { id: 'backgrounds', label: 'Backgrounds', icon: <ImageIcon size={14} /> },
                 { id: 'id', label: 'ID Photos', icon: <UserSquare size={14} /> },
                 { id: 'angles', label: 'Angles', icon: <Eye size={14} /> },
@@ -665,6 +709,18 @@ export default function App() {
             {/* Options List */}
             {activeMenu && (
               <div className="flex overflow-x-auto gap-3 pb-2 scrollbar-hide animate-in fade-in slide-in-from-bottom-4 duration-300">
+                {activeMenu === 'graduation' && GRADUATION.map(item => (
+                  <button
+                    key={item.name}
+                    onClick={() => applyAIEffect(item.prompt)}
+                    className="flex flex-col items-center gap-2 min-w-[70px] group"
+                  >
+                    <div className="w-16 h-16 rounded-xl overflow-hidden border-2 border-transparent group-hover:border-white/50 transition-all shadow-lg">
+                      <img src={item.thumb} alt={item.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </div>
+                    <span className="text-[9px] uppercase tracking-tighter font-bold text-white/70 group-hover:text-white">{item.name}</span>
+                  </button>
+                ))}
                 {activeMenu === 'uniforms' && UNIFORMS.map(item => (
                   <button
                     key={item.name}
